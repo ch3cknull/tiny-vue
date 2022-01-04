@@ -1,17 +1,32 @@
+import { extend } from '../shared'
+
 class ReactiveEffect {
   private _fn: Function
   deps: any[] = []
+  active: boolean = true
   scheduler?: any
+  onStop?: any
 
-  constructor(fn: Function, scheduler?: any) {
+  constructor(fn: Function) {
     this._fn = fn
-    this.scheduler = scheduler
   }
 
   run() {
     activeEffect = this
     return this._fn()
   }
+
+  stop() {
+    if (!this.active) return
+
+    cleanupEffect(this)
+    this.active = false
+    this.onStop && this.onStop()
+  }
+}
+
+function cleanupEffect(effect: any) {
+  effect.deps.forEach((dep: Set<any>) => dep.delete(effect))
 }
 
 const targetMap = new Map()
@@ -48,11 +63,18 @@ export function trigger(target: any, key: any) {
 
 let activeEffect: any
 export function effect(fn: Function, options: any = {}) {
-  const { scheduler } = options
-  const _effect = new ReactiveEffect(fn, scheduler)
+  const _effect = new ReactiveEffect(fn)
+  extend(_effect, options)
 
   _effect.run()
 
-  const runner = _effect.run.bind(_effect)
+  const runner: any = _effect.run.bind(_effect)
+  runner.effect = _effect
   return runner
+}
+
+export function stop(runner: any) {
+  const { effect } = runner
+
+  effect.stop()
 }
