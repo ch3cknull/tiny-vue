@@ -1,18 +1,13 @@
-import { track, trigger } from './effect'
+import { mutableHandlers, readonlyHandlers } from './baseHandlers'
 
 export function reactive(raw: any): any {
-  return new Proxy(raw, {
-    get(target, key) {
-      const res = Reflect.get(target, key)
-      // collect effects
-      track(target, key)
-      return res
-    },
-    set(target, key, value) {
-      const res = Reflect.set(target, key, value)
-      // trigger effects
-      trigger(target, key)
-      return res
-    },
-  })
+  return createActiveObject(raw)
+}
+
+export function readonly(raw: any) {
+  return createActiveObject(raw, readonlyHandlers)
+}
+
+function createActiveObject(raw: any, baseHandlers: any = mutableHandlers) {
+  return new Proxy(raw, baseHandlers)
 }
